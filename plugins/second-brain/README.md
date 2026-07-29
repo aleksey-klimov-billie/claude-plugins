@@ -1,48 +1,31 @@
 # second-brain
 
-A personal memory system for Claude Code. A `SessionEnd` hook captures every session verbatim to
-the vault's `raw/`; on demand, skills distill the queue into a **topical wiki** (what you know
-about X) and a **temporal journal** (when/what you did) — plain Markdown you can browse in
-Obsidian or any editor.
+The two halves of a personal knowledge-vault workflow, split so each runs where it belongs:
 
-Extracted and generalized so it works in any vault, on any machine or account.
+- **`/second-brain:capture`** — run from *any* project. Drops one freeform file into the vault's
+  `inbox/`. Deliberately dumb: no filing, no tagging, no hub edits.
+- **`/second-brain:process`** — run from *inside* the vault. Walks the `inbox/` queue and promotes
+  each capture into a filed, linked, tagged note, confirming the destination with you first.
 
-> **⚠️ Privacy — the vault repo is secret-bearing.** Capture is global: every session in every
-> project is copied **verbatim** into `raw/**/*.jsonl` and committed to git. Only the derived
-> `wiki/`/`journal/` notes are secret-redacted — `raw/` is **not**. Any API key, token, `.env`
-> echo, or confidential paste from any session lands in git **history** and survives later
-> deletion. **Keep the vault in a private repo; never push it to a shared remote.** `raw/` is
-> intentionally tracked (both `file-inbox` and `rebuild-journal` read from it), so it can't simply
-> be gitignored without breaking cross-machine use. Run `/second-brain:doctor` to confirm capture.
+The split exists because filing needs vault context that a session in some other repo doesn't have.
+Capture is cheap and immediate; promotion is a judgment call made later, deliberately.
 
-## What's inside
+## The vault model
 
-### Skills (slash commands)
+```
+Home.md                     root hub
+<domain>/_index.md          domain hub
+<domain>/<topic>/_index.md  topic hub
+<domain>/<topic>/Note.md    a note — one concept
+daily/, inbox/, _meta/, _templates/, _attachments/
+```
 
-Namespaced under the plugin once installed (e.g. `/second-brain:file-inbox`).
+`domain -> topic -> note`, max depth. Every domain and topic folder has exactly one `_index.md` hub
+that links its notes. `_meta/Tags.md` is the controlled tag vocabulary — a tag is registered there
+before it is used. Links flow one way: `inbox/ -> daily/ -> knowledge`, never back.
 
-| Skill | Does |
-|-------|------|
-| `init-vault` | Scaffolds a fresh vault from the bundled template (folder layout, `CLAUDE.md` conventions, `index.md`, `.obsidian/` config, `.gitignore`) and git-inits it. Refuses to overwrite a non-empty directory. |
-| `file-inbox` | Files the vault's pending `inbox/` queue into `wiki/` (via the librarian) and `journal/` (via the journal extractor→grouper), then makes one commit. |
-| `rebuild-journal` | Re-extracts named sessions and merges their work into journal day-files, non-destructively. |
-| `doctor` | Health-checks the capture pipeline — verifies `vault_path` resolves, the vault looks valid, and captures are landing. Run if sessions aren't showing up. |
-
-### Agents (subagents)
-
-Dispatched by the skills as `second-brain:<name>`.
-
-| Agent | Role |
-|-------|------|
-| `librarian` | Files sessions into the topical `wiki/`, merges/dedupes notes, maintains indexes and link-hygiene, records provenance. |
-| `journal-extractor` | Reads one session transcript and emits atomic, project-attributed work items as JSON (map stage). |
-| `journal-grouper` | Merges work items into one journal day-file with semantic dedup (reduce stage). |
-
-### Hook
-
-A `SessionEnd` command hook (`hooks/hooks.json`) runs `hooks/session-capture.sh` after every
-session: it copies the transcript into `raw/<event>/<YYYY-MM>/`, writes write-once metadata, and
-enqueues an `inbox/` pointer. No LLM, fast and deterministic.
+The vault's own `CLAUDE.md` is the authority on these conventions; `process` reads it at the start of
+every run, so the vault stays the source of truth rather than this plugin.
 
 ## Setup
 
@@ -50,38 +33,40 @@ enqueues an `inbox/` pointer. No LLM, fast and deterministic.
 # 1. Add the marketplace (once)
 /plugin marketplace add axklim/claude-plugins
 
-# 2. Install the plugin
+# 2. Install
 /plugin install second-brain@axklim
-
-# 3. Set your vault path when prompted (userConfig: vault_path),
-#    or create a fresh vault and point at it:
-/second-brain:init-vault ~/Documents/second-brain
 ```
 
-Then work normally in your other projects — sessions auto-capture to the vault. When you want to
-file them: `/second-brain:file-inbox`.
+Then point `capture` at your vault by setting `SECOND_BRAIN_VAULT` in `~/.claude/settings.json`:
+
+```json
+{ "env": { "SECOND_BRAIN_VAULT": "/absolute/path/to/your/vault" } }
+```
+
+`capture` refuses to guess a path — if the variable is unset or `$SECOND_BRAIN_VAULT/inbox` is
+missing, it stops and tells you. `process` needs no configuration; it runs against the current
+directory and pre-flights that it looks like a vault.
 
 ## How the pieces fit
 
 ```
-every session ──(SessionEnd hook)──> raw/ + inbox/ pointer
-/second-brain:file-inbox
-   ├─> second-brain:librarian ─────────────> wiki/ (topical)
-   └─> second-brain:journal-extractor ──┐
-       second-brain:journal-grouper ◄───┘──> journal/ (temporal)
-/second-brain:rebuild-journal ──> re-extract named sessions ──> journal/
-/second-brain:init-vault ──> scaffolds a fresh vault from assets/vault-template/
+any project ──/second-brain:capture──> $SECOND_BRAIN_VAULT/inbox/<slug>.md
+                                              │
+in the vault ──/second-brain:process──────────┘──> <domain>/<topic>/<Note>.md
+                                                   + hub bullet in _index.md
+                                                   + tags registered in _meta/Tags.md
+                                                   - capture deleted from inbox/
 ```
+
+Neither skill commits. Changes are left in the working tree for you to review — the vault's default
+branch is usually `main`, and the commit is yours to make.
 
 ## Notes & assumptions
 
-- **It's a Markdown knowledge vault** (browse in Obsidian or any editor), not a code repo: topic folders, atomic notes, `[[wikilinks]]`, YAML
-  frontmatter. The scaffolded `CLAUDE.md` documents the conventions.
-- **The capture hook is global** — it fires on every session and writes to your configured
-  `vault_path`. With no vault configured it is a silent no-op. Sessions run *inside* the vault are
-  skipped (self-capture guard).
-- **Namespacing.** Skills dispatch the bundled agents by their namespaced ids
-  (`second-brain:librarian`, etc.); plugin agents don't resolve by bare name. If you rename this
-  plugin, update those references in the three `skills/*/SKILL.md` files.
-- **Tests.** `tests/test-session-capture.sh` covers the hook; `tests/librarian/test-tooling.sh`
-  self-tests the filing-contract validator.
+- **It's a Markdown vault, not a code repo** — atomic notes, `[[wikilinks]]`, YAML frontmatter.
+  Obsidian is optional; any editor works.
+- **Privacy.** Captures are written by you, on purpose, one at a time — nothing is swept up
+  automatically. Still, treat the vault as private: it accumulates work context and belongs in a
+  private repo.
+- **`inbox/README.md`** documents the queue's conventions. `process` never treats it as a capture and
+  never deletes it.

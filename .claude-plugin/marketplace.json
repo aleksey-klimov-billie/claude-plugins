@@ -13,7 +13,7 @@
     {
       "name": "second-brain",
       "source": "./plugins/second-brain",
-      "description": "Personal memory for Claude Code: a SessionEnd hook captures every session, then skills file it into a topical wiki + temporal journal (librarian + journal extractor/grouper). Plain Markdown — view in any editor."
+      "description": "Personal knowledge-vault workflow: /capture drops raw material into the vault's inbox from any project, /process promotes that queue into filed, linked, tagged notes (domain -> topic -> note). Plain Markdown — view in any editor."
     },
     {
       "name": "common",
