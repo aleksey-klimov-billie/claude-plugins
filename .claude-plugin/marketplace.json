@@ -11,11 +11,6 @@
       "description": "Branch/PR lifecycle (premerge, restructure-commits, merge), docs sync, and review agents (code reviewer, commit-message writer, documentation gap-finder)."
     },
     {
-      "name": "second-brain",
-      "source": "./plugins/second-brain",
-      "description": "Personal knowledge-vault workflow: /capture drops raw material into the vault's inbox from any project, /process promotes that queue into filed, linked, tagged notes (domain -> topic -> note). Plain Markdown — view in any editor."
-    },
-    {
       "name": "common",
       "source": "./plugins/common",
       "description": "Catch-all for skills and agents that don't yet warrant their own focused plugin — a staging area where related items get extracted into a dedicated plugin as they accumulate."
