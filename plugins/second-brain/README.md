@@ -13,7 +13,7 @@ Capture is cheap and immediate; promotion is a judgment call made later, deliber
 ## The vault model
 
 ```
-Home.md                     root hub
+_index.md                   root hub (aliased "Home")
 <domain>/_index.md          domain hub
 <domain>/<topic>/_index.md  topic hub
 <domain>/<topic>/Note.md    a note — one concept

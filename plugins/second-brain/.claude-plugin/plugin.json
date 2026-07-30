@@ -1,6 +1,6 @@
 {
   "name": "second-brain",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Two halves of a personal knowledge-vault workflow: /second-brain:capture drops raw material into the vault's inbox from any project, and /second-brain:process promotes that queue into filed, linked, tagged notes in a domain -> topic -> note hierarchy. Plain Markdown — view in Obsidian or any editor.",
   "author": {
     "name": "Aleksey (gudik)",

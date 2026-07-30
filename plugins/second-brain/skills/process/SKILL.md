@@ -19,11 +19,12 @@ is written. You do the reading, searching, and drafting; they approve the home.
 Confirm you are in the vault, then list the queue:
 
 ```bash
-[ -f Home.md ] && [ -f _meta/Tags.md ] && [ -d inbox ] && echo "vault ok"
+[ -f _index.md ] && [ -f _meta/Tags.md ] && [ -d inbox ] && echo "vault ok"
 ls -1 inbox/ | grep -vx 'README.md'
 ```
 
-- Not the vault? **Stop** and ask the user to `cd` there. Never process from elsewhere.
+- Not the vault? **Stop** and ask the user to `cd` there. Never process from elsewhere. (The root
+  `_index.md` is the vault's root hub; older vaults may still call it `Home.md`.)
 - Queue empty? Say "inbox is empty — nothing to process" and **stop**.
 - **`inbox/README.md` is documentation, not a capture.** It is never processed and never deleted.
 
